@@ -1,6 +1,7 @@
 package com.mawumbo.mystoryapp.ui.home
 
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -10,6 +11,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.mawumbo.mystoryapp.R
 import com.mawumbo.mystoryapp.adapter.StoryListAdapter
 import com.mawumbo.mystoryapp.databinding.FragmentHomeBinding
+import com.mawumbo.mystoryapp.model.Story
+import com.mawumbo.mystoryapp.ui.detailstory.DetailFragment
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -19,6 +22,8 @@ class HomeFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: HomeViewModel by viewModels()
+    private lateinit var storyList: List<Story>
+
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -32,7 +37,10 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val adapter = StoryListAdapter(onClick = { storyId ->
-            toDetailStory(storyId)
+            val selectedStory = getDataById(storyId)
+            if (selectedStory != null) {
+                toDetailStory(selectedStory)
+            }
         })
 
         val layoutManager = LinearLayoutManager(requireContext())
@@ -46,8 +54,10 @@ class HomeFragment : Fragment() {
             isLoading(it)
         }
 
-        viewModel.allStory.observe(viewLifecycleOwner) {
-            adapter.submitList(it)
+        viewModel.allStory.observe(viewLifecycleOwner) {storyData ->
+            Log.d("Home", "$storyData")
+            storyList = storyData
+            adapter.submitList(storyData)
         }
 
         binding.toolbar.setOnMenuItemClickListener {
@@ -90,9 +100,23 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private fun toDetailStory(storyId: String?) {
-        val action = HomeFragmentDirections.actionHomeFragmentToDetailFragment(storyId)
-        findNavController().navigate(action)
+    private fun getDataById(storyId: String?): Story? {
+        return storyList.find { it.id == storyId }
+    }
+
+    private fun toDetailStory(storyId: Story) {
+        val bundle = Bundle()
+        bundle.putParcelable("story", storyId)
+
+        val detailFragment = DetailFragment()
+        detailFragment.arguments = bundle
+
+        val transaction = parentFragmentManager.beginTransaction()
+        transaction.replace(R.id.container, detailFragment)
+        transaction.addToBackStack(null)
+        transaction.commit()
+//        val action = HomeFragmentDirections.actionHomeFragmentToDetailFragment(storyId)
+//        findNavController().navigate(action)
     }
 
     override fun onDestroy() {
